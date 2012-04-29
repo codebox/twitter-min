@@ -115,8 +115,8 @@ function onLoad(){
 		}
 	}
 	function markupText(txt){
-		return txt.replace(/(@\S+)/g, '<span class="userLink">$1</span>' )
-			      .replace(/(#\S+)/g, '<span class="hashLink">$1</span>' )
+		return txt.replace(/(@\w+)/g, '<span class="userLink">$1</span>' )
+			      .replace(/(#\w+)/g, '<span class="hashLink">$1</span>' )
 			      .replace(/(https?:\/\/\S+)/g, '<a target="new" href="$1">$1</a>' );
 	}
 	var c=0;
@@ -129,7 +129,8 @@ function onLoad(){
 				var t = tweets.pop();
 				tweetId += 1;
 				var resultsDiv = getById('results');
-				var html = '<div class="wrapper" id="wrapper' + tweetId + '" style="height: 0; overflow: hidden"><div id="tweet' + tweetId + '"><div class="tweet">' + markupText(t.text) + '</div><div class="userLink">@' + t.from_user + '</div></div></div>';
+				var tweetHtml = '<div id="tweet' + tweetId + '"><div class="tweet">' + markupText(t.text) + '</div><div class="userLink">@' + t.from_user + '</div></div>';
+				var html = '<div class="wrapper" id="wrapper' + tweetId + '" style="height: 0; overflow: hidden">' + tweetHtml + '</div>';
 				resultsDiv.innerHTML = html + resultsDiv.innerHTML;
 				var wrapperDiv = getById('wrapper' + tweetId);
 				function getHeight(el){
@@ -186,14 +187,10 @@ function callme(r){
 	TODO
 	----
 	* Fix all the dodgy code
-	* Remove divs as well as adding them
-	* remove wrapper divs after animations complete
+	* Reuse same divs instead of adding/removing
 	* Minor CSS fixes
 	* Test cross-browser
 	* noscript tag
-	* clicking tag/user links should trigger search automatically
-	* remove punctuation characters from end of tags/user name links
-	* don't search if no text entered
 	* jslint
 	* html doctype
 	-->
