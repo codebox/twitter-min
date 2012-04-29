@@ -132,10 +132,10 @@ function onLoad(){
 				var html = '<div class="wrapper" id="wrapper' + tweetId + '" style="height: 0; overflow: hidden"><div id="tweet' + tweetId + '"><div class="tweet">' + markupText(t.text) + '</div><div class="userLink">@' + t.from_user + '</div></div></div>';
 				resultsDiv.innerHTML = html + resultsDiv.innerHTML;
 				var wrapperDiv = getById('wrapper' + tweetId);
-				var targetHeight = getHeight(getById('tweet' + tweetId));
 				function getHeight(el){
 					return el.clientHeight;
 				}
+				var targetHeight = getHeight(getById('tweet' + tweetId));
 				function setHeight(el, height){
 					el.style.height = (height + 'px');
 				}
@@ -162,12 +162,12 @@ function onLoad(){
 		}
 	};
 	document.body.onclick = function(e){
-		var cssClass = e.srcElement.className;
+		var cssClass = e.target.className;
 		if (cssClass === 'userLink'){
-			getById('search').value = e.srcElement.innerHTML;
+			getById('search').value = e.target.innerHTML;
 			getById('search').focus();
 		} else if (cssClass === 'hashLink'){
-			getById('search').value = e.srcElement.innerHTML;
+			getById('search').value = e.target.innerHTML;
 			getById('search').focus();
 		}
 	}
@@ -187,6 +187,7 @@ function callme(r){
 	----
 	* Fix all the dodgy code
 	* Remove divs as well as adding them
+	* remove wrapper divs after animations complete
 	* Minor CSS fixes
 	* Test cross-browser
 	* noscript tag
