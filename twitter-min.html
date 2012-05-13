@@ -8,8 +8,8 @@
 			margin: 0;
 			padding: 0;
 		}
-		div.wrapper{
-			margin: 0.5em;
+		div.tweetContainer{
+			padding: 0.5em;
 		}
 		div.tweet{
 			font-size: 24pt;
@@ -24,7 +24,7 @@
 		div.userLink{
 			font-size: 12pt;
 			margin: 0;
-			margin: 0 0 2em 2em;
+			margin-left: 2em;
 			font-weight: bold;
 		}
 		.hashLink:hover{
@@ -86,6 +86,11 @@
 			font-weight: bold;
 			font-size: 1.5em;
 		}
+		#topDivWrapper{
+			overflow: hidden;
+			padding: 0;
+			margin: 0;
+		}
 	</style>
 	<script>
 /*jslint browser: true, white: true, plusplus: true, maxerr: 50, indent: 4 */
@@ -96,7 +101,7 @@ function onLoad(){
 	
 	var displayTimer;
 	model = (function(){
-		var model = {}, search, since, tweets = [], fnGotTweets, fnNeedMoreTweets, nextTweetId = 1;
+		var model = {}, search, since, tweets = [], fnGotTweets, fnNeedMoreTweets;
 		
 		model.getSearch = function(){
 			return search;
@@ -120,7 +125,6 @@ function onLoad(){
 			var tweet, i, l;
 			for(i=0,l=newTweets.length; i<l; i++){
 				tweet = newTweets[i];
-				tweet.id = nextTweetId++;
 				tweets.push(tweet);
 			}
 			fnGotTweets();
@@ -130,6 +134,9 @@ function onLoad(){
 				fnNeedMoreTweets();
 			}
 			return tweets.pop();
+		};
+		model.hasTweets = function(){
+			return tweets.length;
 		};
 		
 		model.onGotResponse = function(fn){
@@ -147,7 +154,25 @@ function onLoad(){
 		function getById(id){
 			return document.getElementById(id);
 		}
-		var page = {}, searchBox = getById('search'), searchInProgress = getById('searchIcon'), instructions = getById('instructions'), resultsDiv = getById('results');
+		var page = {}, searchBox = getById('search'), searchInProgress = getById('searchIcon'), instructions = getById('instructions'), resultsDiv = getById('results'), divCount = 10, divs = [], topDivWrapper;
+		
+		page.setupDivs = function(){
+			function makeDiv(parent, cssClass){
+				var div = document.createElement('div');
+				div.className = cssClass;
+				parent.appendChild(div);
+				
+				return div;
+			}
+			topDivWrapper = makeDiv(resultsDiv, '');
+			topDivWrapper.id = 'topDivWrapper';
+			
+			var i, topDiv = makeDiv(topDivWrapper, 'tweetContainer');
+			divs.push(topDiv);
+			for (i=0; i<divCount-1; i++){
+				divs.push(makeDiv(resultsDiv, 'tweetContainer'));			
+			}
+		};
 		
 		page.getSearchText = function(){
 			return searchBox.value;
@@ -199,29 +224,33 @@ function onLoad(){
 					  .replace(/(https?:\/\/\S+)/g, '<a target="new" href="$1">$1</a>' );
 		}
 		
-		function makeTweetHtml(text, user, id){
-			var tweetHtml = '<div id="tweet' + id + '"><div class="tweet">' + markupText(text) + '</div><div class="userLink">@' + user + '</div></div>', html = '<div class="wrapper" id="wrapper' + id + '" style="height: 0; overflow: hidden">' + tweetHtml + '</div>';
-			
-			return html;
+		function makeTweetHtml(text, user){
+			return '<div class="tweet">' + markupText(text) + '</div><div class="userLink">@' + user + '</div>';
 		}
 		
 		page.displayTweet = function(tweet){
-			var wrapperDiv, html = makeTweetHtml(tweet.text, tweet.from_user, tweet.id), targetHeight, timer;
-			resultsDiv.innerHTML = html + resultsDiv.innerHTML;
-			wrapperDiv = getById('wrapper' + tweet.id);
+			var i, topDiv = divs[0], targetHeight, timer;
+			for (i=divCount-1; i>0; i--){
+				divs[i].innerHTML = divs[i-1].innerHTML;
+			}
+			
 			function getHeight(el){
 				return el.clientHeight;
 			}
-			targetHeight = getHeight(getById('tweet' + tweet.id));
 			function setHeight(el, height){
 				el.style.height = (height + 'px');
 			}
+
+			setHeight(topDivWrapper, 0);
+			topDiv.innerHTML = makeTweetHtml(tweet.text, tweet.from_user);
+			targetHeight = getHeight(topDiv);
+
 			timer = setInterval(function(){
-				var height = getHeight(wrapperDiv);
+				var height = getHeight(topDivWrapper);
 				if (height >= targetHeight){
 					clearInterval(timer);
 				} else {
-					setHeight(wrapperDiv, height + 3);
+					setHeight(topDivWrapper, height + 3);
 				}
 			}, 20);	
 		
@@ -239,6 +268,9 @@ function onLoad(){
 		var searchText = page.getSearchText(), url;
 		if (searchText !== model.getSearch()){
 			model.clearTweets();
+			clearInterval(displayTimer);
+			displayTimer = null;
+
 			page.hideInstructions();
 			page.toggleSearchInProgress(true);
 
@@ -254,17 +286,12 @@ function onLoad(){
 			var tweet = model.popTweet();
 			if (tweet) {
 				page.displayTweet(tweet);
-			} else {
-				clearInterval(displayTimer);
-				displayTimer = null;
 			}
-			return tweet;
 		}
 		return function(){
-			if (showNextTweet()){
-				if (!displayTimer){
-					displayTimer = setInterval(showNextTweet, 5000);
-				}
+			if (!displayTimer && model.hasTweets()){
+				showNextTweet();
+				displayTimer = setInterval(showNextTweet, 5000);
 			}
 		};
 	}()));
@@ -279,7 +306,7 @@ function onLoad(){
 			page.setSearchText(e.target.innerHTML);
 		}
 	});
-
+	page.setupDivs();
 }	
 
 function responseCallback(r){
@@ -288,24 +315,17 @@ function responseCallback(r){
 	page.toggleSearchInProgress(false);
 	model.setSince(r.max_id_str);
 	var tweets = [], i, l;
-	for (i=0, l=r.results.length; i<l; i++){
-		tweets.push(r.results[i]);
-	}	
+	if (r.results) {
+		for (i=0, l=r.results.length; i<l; i++){
+			tweets.push(r.results[i]);
+		}
+	}
 	model.appendTweets(tweets);
 }
 	
 	</script>
 </head>
 <body onload="onLoad()">
-	<!--
-	TODO
-	* Reuse same divs instead of adding/removing
-	* Minor CSS fixes
-	* Test cross-browser
-	* noscript tag
-	* jslint
-	* html doctype
-	-->
 	<div id="topbar">
 	<input type="text" id="search" value="" placeholder="Search" autofocus />
 	<div id="searchIcon">
